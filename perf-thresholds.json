@@ -1,0 +1,8 @@
+{
+  "max_error_rate_percent": 5,
+  "max_p95_ms": {
+    "01_LaunchApplication": 2000,
+    "02_EnterTheStore": 2000,
+    "default": 3000
+  }
+}
