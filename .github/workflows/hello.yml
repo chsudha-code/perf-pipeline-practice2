@@ -1,1 +1,13 @@
+name: My First Pipeline
 
+on: workflow_dispatch
+
+jobs:
+  say-hello:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Say hello
+        run: echo "Hello from GitHub's server, not your laptop!"
+
+      - name: Show the date
+        run: date
