@@ -1,13 +1,47 @@
-name: My First Pipeline
+name: JMeter Performance Test
 
 on: workflow_dispatch
 
 jobs:
-  say-hello:
+  performance-test:
     runs-on: ubuntu-latest
     steps:
-      - name: Say hello
-        run: echo "Hello from GitHub's server, not your laptop!"
+      - name: Get the code and files
+        uses: actions/checkout@v4
 
-      - name: Show the date
-        run: date
+      - name: Install Java (JMeter needs it)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Install JMeter
+        run: |
+          wget https://dlcdn.apache.org/jmeter/binaries/apache-jmeter-5.6.3.tgz
+          tar -xzf apache-jmeter-5.6.3.tgz
+
+      - name: Run JMeter test
+        run: |
+          apache-jmeter-5.6.3/bin/jmeter -n -t myplan.jmx -l result1.jtl -e -o html-report
+
+      - name: Check error rate and fail build if too high
+        run: |
+          total=$(tail -n +2 result1.jtl | wc -l)
+          failed=$(tail -n +2 result1.jtl | awk -F',' '$8=="false"' | wc -l)
+          error_rate=$(( failed * 100 / total ))
+          echo "Total requests: $total"
+          echo "Failed requests: $failed"
+          echo "Error rate: $error_rate%"
+          if [ "$error_rate" -gt 5 ]; then
+            echo "Error rate exceeds 5% threshold — failing build"
+            exit 1
+          fi
+
+      - name: Upload results and HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jmeter-results
+          path: |
+            result1.jtl
+            html-report/
