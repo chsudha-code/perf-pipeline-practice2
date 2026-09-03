@@ -22,7 +22,7 @@ jobs:
 
       - name: Run JMeter test
         run: |
-          apache-jmeter-5.6.3/bin/jmeter -n -t myplan.jmx -l result1.jtl -e -o html-report
+          apache-jmeter-5.6.3/bin/jmeter -n -t DEMO_001.jmx -l result1.jtl -e -o html-report
 
       - name: Check error rate and fail build if too high
         run: |
