@@ -1,0 +1,54 @@
+name: Performance Triage Pipeline
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  performance-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        testplan: [myplan-checkout, myplan-search]
+      fail-fast: false
+    steps:
+      - name: Get the code and files
+        uses: actions/checkout@v4
+
+      - name: Install Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Install JMeter
+        run: |
+          wget https://dlcdn.apache.org/jmeter/binaries/apache-jmeter-5.6.3.tgz
+          tar -xzf apache-jmeter-5.6.3.tgz
+
+      - name: Run JMeter test - ${{ matrix.testplan }}
+        run: |
+          apache-jmeter-5.6.3/bin/jmeter -n -t ${{ matrix.testplan }}.jmx -l ${{ matrix.testplan }}-result.jtl -e -o html-report-${{ matrix.testplan }}
+
+      - name: Check error rate threshold
+        run: |
+          max_error=$(jq '.max_error_rate_percent' perf-thresholds.json)
+          total=$(tail -n +2 ${{ matrix.testplan }}-result.jtl | wc -l)
+          failed=$(tail -n +2 ${{ matrix.testplan }}-result.jtl | awk -F',' '$8=="false"' | wc -l)
+          error_rate=$(( failed * 100 / total ))
+          echo "[${{ matrix.testplan }}] Error rate: $error_rate% (threshold: $max_error%)"
+          if [ "$error_rate" -gt "$max_error" ]; then
+            echo "::error::[${{ matrix.testplan }}] Error rate $error_rate% exceeds threshold $max_error%"
+            exit 1
+          fi
+
+      - name: Upload results - ${{ matrix.testplan }}
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jmeter-results-${{ matrix.testplan }}-${{ github.run_number }}
+          path: |
+            ${{ matrix.testplan }}-result.jtl
+            html-report-${{ matrix.testplan }}/
