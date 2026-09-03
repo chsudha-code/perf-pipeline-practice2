@@ -23,7 +23,7 @@ jobs:
 
       - name: Run JMeter test
         run: |
-          apache-jmeter-5.6.3/bin/jmeter -n -t Demo_001.jmx -l result1.jtl -e -o html-report
+          apache-jmeter-5.6.3/bin/jmeter -n -t Demo_002.jmx -l result1.jtl -e -o html-report
 
       - name: Check against thresholds
         run: |
