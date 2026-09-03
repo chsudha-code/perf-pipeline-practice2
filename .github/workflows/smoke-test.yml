@@ -35,3 +35,10 @@ jobs:
             exit 1
           fi
           echo "Smoke test passed — safe to review this PR"
+
+      - name: Upload smoke test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-results-${{ github.run_number }}
+          path: smoke-result.jtl
