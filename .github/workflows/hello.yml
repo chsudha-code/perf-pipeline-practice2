@@ -3,6 +3,9 @@ name: JMeter Performance Test
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write   # needed so the pipeline can commit baseline.json back
+
 jobs:
   performance-test:
     runs-on: ubuntu-latest
@@ -25,7 +28,7 @@ jobs:
         run: |
           apache-jmeter-5.6.3/bin/jmeter -n -t Demo_002.jmx -l result1.jtl -e -o html-report
 
-      - name: Check against thresholds
+      - name: Check error rate threshold
         run: |
           max_error=$(jq '.max_error_rate_percent' perf-thresholds.json)
           total=$(tail -n +2 result1.jtl | wc -l)
@@ -36,7 +39,20 @@ jobs:
             echo "::error::Error rate $error_rate% exceeds threshold $max_error%"
             exit 1
           fi
-          echo "Within threshold — passed"
+
+      - name: Check for performance regression vs baseline
+        run: |
+          chmod +x check-regression.sh
+          ./check-regression.sh
+
+      - name: Commit updated baseline
+        if: success()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add baseline.json
+          git commit -m "Update performance baseline [skip ci]" || echo "No changes to commit"
+          git push
 
       - name: Upload results and HTML report
         if: always()
